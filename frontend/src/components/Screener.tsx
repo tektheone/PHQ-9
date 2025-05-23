@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from './Button';
 import { Radio } from './Radio';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -34,6 +34,8 @@ const ProgressBar = ({ progress }: { progress: number }) => (
   </div>
 );
 
+import { ThemeToggle } from './ThemeToggle';
+
 export default function Screener() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Answer[]>([]);
@@ -51,12 +53,33 @@ export default function Screener() {
     }
   });
 
+  // Initialize answers with first option for each question
+  const initializeAnswers = useCallback((questions: Question[], options: AnswerOption[]) => {
+    const initialAnswers = questions.map(question => ({
+      question_id: question.question_id,
+      value: options[0].value // Use first option for each question
+    }));
+    setAnswers(initialAnswers);
+  }, []);
+
+  useEffect(() => {
+    if (screener?.content?.sections?.[0]) {
+      const { questions, answers: options } = screener.content.sections[0];
+      if (questions && options && answers.length === 0) {
+        initializeAnswers(questions, options);
+      }
+    }
+  }, [screener, answers.length, initializeAnswers]);
+
+
+
   if (isLoading || isRestarting) return <LoadingSpinner />;
   if (error) return <div>Error loading screener</div>;
   if (!screener) return null;
 
-  const questions = screener.content.sections[0].questions;
-  const answerOptions = screener.content.sections[0].answers;
+  if (!screener?.content?.sections?.[0]) return null;
+
+  const { questions, answers: answerOptions } = screener.content.sections[0];
   const currentQuestion = questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
 
@@ -109,9 +132,9 @@ export default function Screener() {
 
   if (result) {
     return (
-      <div className="max-w-2xl mx-auto p-6 animate-slideIn">
+      <div className="max-w-2xl mx-auto p-6 animate-slideIn dark:bg-gray-900 transition-colors">
         <h2 className="text-2xl font-bold mb-4 text-blue-800">Assessment Complete</h2>
-        <div className="bg-white p-8 rounded-xl shadow-lg border border-blue-100">
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg border border-blue-100 dark:border-gray-700 transition-colors">
           <div className="flex items-center mb-6">
             <div className="rounded-full bg-green-100 p-3 mr-4">
               <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -121,18 +144,27 @@ export default function Screener() {
             <h3 className="text-xl font-semibold text-gray-800">Recommended Assessments</h3>
           </div>
           <div className="space-y-4">
-            {result.results.map((assessment, index) => (
-              <a
-                key={assessment}
-                href="https://www.blueprint.ai"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block"
-              >
+            {result.results.length === 0 ? (
+              <div className="text-center p-6 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors">
+                <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p className="text-lg font-medium text-gray-900 dark:text-white">No assessments recommended</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Based on your responses, no additional assessments are needed at this time.</p>
+              </div>
+            ) : (
+              result.results.map((assessment, index) => (
+                <a
+                  key={assessment}
+                  href="https://www.blueprint.ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
+                >
                 <Button
                   variant="secondary"
                   fullWidth
-                  className="p-4 bg-blue-50 border-blue-100 hover:bg-blue-100 animate-scaleIn"
+                  className="p-4 bg-blue-50 border-blue-100 hover:bg-blue-100 hover:border-blue-300 animate-scaleIn group"
                   style={{ animationDelay: `${index * 150}ms` }}
                 >
                   <div className="flex items-center">
@@ -141,14 +173,30 @@ export default function Screener() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                       </svg>
                     </div>
-                    <div className="ml-4">
-                      <h4 className="text-lg font-medium text-gray-900">{assessment}</h4>
-                      <p className="text-sm text-gray-500">Click to begin assessment</p>
+                    <div className="ml-4 flex-grow">
+                      <h4 className="text-lg font-medium text-gray-900 flex items-center">
+                        {assessment}
+                        <svg
+                          className="w-4 h-4 ml-2 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                          />
+                        </svg>
+                      </h4>
+                      <p className="text-sm text-gray-500">Click to begin a assessment</p>
                     </div>
                   </div>
                 </Button>
-              </a>
-            ))}
+                </a>
+              ))
+            )}
           </div>
           <div className="mt-12 border-t pt-8">
             <Button
@@ -170,9 +218,12 @@ export default function Screener() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6 animate-fadeIn">
+    <div className="max-w-2xl mx-auto p-6 animate-fadeIn transition-colors">
+      <div className="flex justify-end mb-4">
+        <ThemeToggle />
+      </div>
       <div className="mb-8">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-4 dark:text-white">
           <h1 className="text-2xl font-bold text-blue-800">{screener.content.display_name}</h1>
           <span className="px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
             Question {currentQuestionIndex + 1} of {questions.length}
