@@ -1,19 +1,12 @@
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { Outfit } from 'next/font/google';
 import { Providers } from '@/app/providers';
 
-const outfit = Outfit({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-outfit',
-});
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: 'Clinical Assessment | Blueprint',
-  description: 'A comprehensive clinical assessment tool for mental health screening',
-  viewport: 'width=device-width, initial-scale=1',
-  themeColor: '#3B82F6',
+  title: 'Blueprint Assessment',
+  description: 'Clinical assessment system',
 };
 
 export default function RootLayout({
@@ -23,7 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${outfit.variable} font-sans antialiased`}>
+      <body className={inter.className}>
         <Providers>{children}</Providers>
       </body>
     </html>
